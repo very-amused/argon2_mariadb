@@ -1,3 +1,6 @@
 [submodule "argon2"]
 	path = argon2
 	url = https://github.com/P-H-C/phc-winner-argon2.git
+[submodule "jsmn"]
+	path = jsmn
+	url = https://github.com/zserge/jsmn.git
