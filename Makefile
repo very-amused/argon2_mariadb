@@ -16,38 +16,55 @@ objects-argon2-pthread=$(src-argon2:.c=.pthread.o) $(src-argon2-pthread:.c=.pthr
 objects-argon2-ref-pthread=$(src-argon2-ref:.c=.pthread.o)
 objects-argon2-simd-pthread=$(src-argon2-simd:.c=.pthread.o)
 
-outdir=lib
+outdir=build
+# Static library dir
+slibdir=slib
 $(shell if [ ! -d $(outdir) ]; then mkdir $(outdir); fi)
+$(shell if [ ! -d $(slibdir) ]; then mkdir $(slibdir); fi)
 
-# Configure object files to be built
+# Static library files
+slib-argon2=$(slibdir)/argon2.a
+slib-argon2-simd=$(slibdir)/argon2-simd.a
+slib-argon2-pthread=$(slibdir)/argon2-pthread.a
+slib-argon2-simd-pthread=$(slibdir)/argon2-simd-pthread.a
+
+# Configure argon2 features by setting static lib target
 ifdef NO_PTHREAD
-objects += $(objects-argon2)
+CFLAGS += -DARGON2_NO_THREADS
 ifdef NO_SIMD
-objects += $(objects-argon2-ref)
+slib-argon2-target=$(slib-argon2)
 else
-objects += $(objects-argon2-simd)
+slib-argon2-target=$(slib-argon2-simd)
 endif
 else
-objects += $(objects-argon2-pthread)
 ifdef NO_SIMD
-objects += $(objects-argon2-ref-pthread)
+slib-argon2-target=$(slib-argon2-pthread)
 else
-objects += $(objects-argon2-simd-pthread) 
+slib-argon2-target=$(slib-argon2-simd-pthread)
 endif
 endif
 
 # Output targets
 lib=$(outdir)/argon2_mariadb.so
 
-$(lib): $(objects)
-	$(CC) -o $@ $^ $(CFLAGS)
-.PHONY: $(lib)
+$(lib): $(objects) $(slib-argon2-target)
+	$(CC) -shared -o $@ $^ $(CFLAGS)
+
+# Static lib targets
+$(slib-argon2): $(objects-argon2) $(objects-argon2-ref)
+	$(AR) rcs $@ $^
+$(slib-argon2-simd): $(objects-argon2) $(objects-argon2-simd)
+	$(AR) rcs $@ $^
+$(slib-argon2-pthread): $(objects-argon2-pthread) $(objects-argon2-ref-pthread)
+	$(AR) rcs $@ $^
+$(slib-argon2-simd-pthread): $(objects-argon2-pthread) $(objects-argon2-simd-pthread)
+	$(AR) rcs $@ $^
 
 src/%.o: src/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 argon2/src/%.o: argon2/src/%.c
-	$(CC) -c -o $@ $< $(CFLAGS) -DARGON2_NO_THREADS
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 argon2/src/%.pthread.o: argon2/src/%.c
 	$(CC) -c -o $@ $< $(CFLAGS) -pthread
@@ -60,5 +77,5 @@ $(objects-argon2-simd-pthread): $(src-argon2-simd)
 
 clean:
 	rm -f $(objects) $(objects-argon2) $(objects-argon2-ref) $(objects-argon2-simd) $(objects-argon2-simd) $(objects-argon2-pthread) $(objects-argon2-ref-pthread) $(objects-argon2-simd-pthread) $(lib)
-	rm -rf $(outdir)
+	rm -rf $(outdir) $(slibdir)
 .PHONY: clean
