@@ -4,3 +4,4 @@ slib
 build
 .cache
 compile_commands.json
+test

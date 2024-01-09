@@ -20,8 +20,8 @@ int Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params) {
 #define UINT_STRLEN(v) (v == 0 ? 1 : (size_t)(log10(v)+1))
 
 static const size_t Argon2_MariaDB_Params_encoded_prefix_len(const Argon2_MariaDB_Params *params) {
-	return STRLEN("$argon2") + (params->mode == Argon2_id ? 2 : 1) // i|d|id
-		+ STRLEN("$v=") + UINT_STRLEN(params->mode);
+	return STRLEN("$") + strlen(argon2_type2string(params->mode, 0))
+		+ STRLEN("$v=") + UINT_STRLEN(ARGON2_VERSION_NUMBER);
 }
 static const size_t Argon2_MariaDB_Params_encoded_params_len(const Argon2_MariaDB_Params *params) {
 	return STRLEN("$m=") + UINT_STRLEN(params->m_cost)
@@ -48,6 +48,25 @@ int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *resu
 	if (result_len != Argon2_MariaDB_Params_encoded_len(params)) {
 		return 1;
 	}
+
+	const size_t prefix_len = Argon2_MariaDB_Params_encoded_prefix_len(params);
+	const size_t params_len = Argon2_MariaDB_Params_encoded_params_len(params);
+	const size_t salt_len = Argon2_MariaDB_Params_encoded_salt_len(params);
+	
+	// Encode prefix
+	size_t offset = 0;
+	snprintf(result, prefix_len+1, "$%s$v=%d", argon2_type2string(params->mode, 0), ARGON2_VERSION_NUMBER);
+	offset += prefix_len;
+	// Encode numerical params
+	snprintf(result + offset, params_len+1, "$m=%u,t=%u,p=%u", params->m_cost, params->t_cost, params->parallelism);
+	offset += params_len;
+	// Encode salt using base64
+	const size_t b64_salt_len = salt_len - 1; // disregard the $ prefix for the b64 string itself
+	char encoded_salt[b64_salt_len];
+	b64_encode(params->salt, sizeof(params->salt), encoded_salt, b64_salt_len);
+	snprintf(result + offset, salt_len+1, "$%s", encoded_salt);
+
+	return 0;
 }
 
 int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *result, const size_t result_len);
