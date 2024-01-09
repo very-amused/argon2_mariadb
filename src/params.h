@@ -29,12 +29,14 @@ static const Argon2_MariaDB_Params ARGON2_MARIADB_DEFAULT_PARAMS = {
 };
 
 static const Argon2_MariaDB_Params ARGON2_MARIADB_MIN_PARAMS = {
+	.mode = Argon2_d,
 	.t_cost = 3,
 	.m_cost = 1 << 12, // 4MiB
 	.parallelism = 1
 };
 
 static const Argon2_MariaDB_Params ARGON2_MARIADB_MAX_PARAMS = {
+	.mode = Argon2_id,
 	.t_cost = 10,
 	.m_cost = -1u,
 	.parallelism = 4
@@ -55,3 +57,11 @@ int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *resu
 
 // Decode params from result.
 int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *result, const size_t result_len);
+
+// Validate params.
+int Argon2_MariaDB_Params_validate(const Argon2_MariaDB_Params *params);
+
+// Set and validate all required numerical params (salt generation is still needed).
+// Returns nonzero if validation fails.
+int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
+		argon2_type mode, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism);

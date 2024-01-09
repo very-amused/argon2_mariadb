@@ -108,7 +108,9 @@ int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *enco
 
 	// Decode mode from prefix
 	params->mode = -1;
-	for (argon2_type t = Argon2_d; t <= Argon2_id; t++) {
+	const argon2_type min_mode = ARGON2_MARIADB_MIN_PARAMS.mode,
+				max_mode = ARGON2_MARIADB_MAX_PARAMS.mode;
+	for (argon2_type t = min_mode; t <= max_mode; t++) {
 		if (strncmp(encoded + enc_prefix_offset, argon2_type2string(t, 0), enc_prefix_len) == 0) {
 			params->mode = t;
 			break;
@@ -136,4 +138,20 @@ int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *enco
 	}
 
 	return 0;
+}
+
+int Argon2_MariaDB_Params_validate(const Argon2_MariaDB_Params *params) {
+#define OK(f) (params->f >= ARGON2_MARIADB_MIN_PARAMS.f && params->f <= ARGON2_MARIADB_MAX_PARAMS.f)
+	return OK(mode) && OK(t_cost) && OK(m_cost) && OK(parallelism);
+#undef OK
+}
+
+int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
+		argon2_type mode, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism) {
+	params->mode = mode;
+	params->t_cost = t_cost;
+	params->m_cost = m_cost;
+	params->parallelism = parallelism;
+
+	return Argon2_MariaDB_Params_validate(params);
 }
