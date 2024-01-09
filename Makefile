@@ -1,4 +1,4 @@
-CFLAGS=-O2 -Wall -I argon2/include -fPIC
+CFLAGS=-O2 -Wall -I argon2/include -I b64/include -fPIC
 
 # Source files
 src=src/params.c src/argon2_mariadb.c
