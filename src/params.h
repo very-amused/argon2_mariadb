@@ -50,6 +50,7 @@ int Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params);
 const size_t Argon2_MariaDB_Params_encoded_len(const Argon2_MariaDB_Params *params);
 
 // Encode params as a UTF-8 string to result.
+// No null termination is performed.
 int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *result, const size_t result_len);
 
 // Decode params from result.

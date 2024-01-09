@@ -14,6 +14,11 @@ int main() {
 	result[result_len] = '\0';
 	status = Argon2_MariaDB_Params_encode(&params, result, result_len);
 	printf("%s\n", result);
+	
+	Argon2_MariaDB_Params decoded;
+	status = Argon2_MariaDB_Params_decode(&decoded, result, result_len);
+	status = Argon2_MariaDB_Params_encode(&decoded, result, result_len);
+	printf("%s\n", result);
 
 	return status;
 }

@@ -4,6 +4,7 @@
 #include <argon2.h>
 #include <base64.h>
 #include <string.h>
+#include <stdio.h>
 
 void Argon2_MariaDB_Params_default(Argon2_MariaDB_Params *params) {
 	params->mode = ARGON2_MARIADB_DEFAULT_PARAMS.mode;
@@ -61,12 +62,78 @@ int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *resu
 	snprintf(result + offset, params_len+1, "$m=%u,t=%u,p=%u", params->m_cost, params->t_cost, params->parallelism);
 	offset += params_len;
 	// Encode salt using base64
-	const size_t b64_salt_len = salt_len - 1; // disregard the $ prefix for the b64 string itself
-	char encoded_salt[b64_salt_len];
-	b64_encode(params->salt, sizeof(params->salt), encoded_salt, b64_salt_len);
-	snprintf(result + offset, salt_len+1, "$%s", encoded_salt);
+	result[offset] = '$';
+	offset++;
+	const size_t b64_salt_len = salt_len - 1; // Account for $ prefix
+	b64_encode(params->salt, sizeof(params->salt), result + offset, b64_salt_len);
 
 	return 0;
 }
 
-int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *result, const size_t result_len);
+// strtok if it was good.
+// *offset and *tok_len must both be 0 when first called,
+// and will be set to offset and length values (relative to s) of the next split token
+static void _strtokn(const char *s, const size_t s_len, const char delim,
+		size_t *offset, size_t *tok_len) {
+	// Move offset past previous token + delimiter
+	*offset += *tok_len + sizeof(delim);
+	// Max token length
+	const char max_len = s_len - *offset;
+	// Token start
+	const char *start = s + *offset;
+	// Reset current token length
+	*tok_len = 0;
+
+	// Search until the next token is found or the string ends
+	while (start[*tok_len] != delim && *tok_len < max_len) {
+		(*tok_len)++;
+	}
+}
+
+int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *encoded, const size_t encoded_len) {
+	// Split tokens using the $ char
+	size_t offset = 0, token_len = 0;
+#define NEXT() _strtokn(encoded, encoded_len, '$', &offset, &token_len)
+	NEXT();
+	const size_t enc_prefix_offset = offset;
+	const size_t enc_prefix_len = token_len;
+	NEXT(); // Discard version field
+	NEXT();
+	const size_t enc_params_offset = offset;
+	const size_t enc_params_len = token_len;
+	NEXT();
+	const size_t enc_salt_offset = offset;
+	const size_t enc_salt_len = token_len;
+#undef NEXT
+
+	// Decode mode from prefix
+	params->mode = -1;
+	for (argon2_type t = Argon2_d; t <= Argon2_id; t++) {
+		if (strncmp(encoded + enc_prefix_offset, argon2_type2string(t, 0), enc_prefix_len) == 0) {
+			params->mode = t;
+			break;
+		}
+	}
+	if (params->mode == -1) {
+		return 1;
+	}
+
+	// Decode numerical params
+	// Copy and null-terminate for safe use with sscanf
+	char enc_params[enc_params_len + 1];
+	strncpy(enc_params, encoded + enc_params_offset, enc_params_len);
+	enc_params[enc_params_len] = '\0';
+	int status;
+	status = sscanf(enc_params, "m=%u,t=%u,p=%u", &params->m_cost, &params->t_cost, &params->parallelism);
+	if (status != 3) {
+		return 1;
+	}
+
+	// Decode salt
+	status = b64_decode(encoded + enc_salt_offset, enc_salt_len, params->salt, sizeof(params->salt));
+	if (status != 0) {
+		return 1;
+	}
+
+	return 0;
+}
