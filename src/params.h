@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
+#include <argon2.h>
 
 // This library uses a constant hash size of 32 bytes
 #define ARGON2_MARIADB_HASH_LEN 32
@@ -10,6 +10,7 @@
 // Time cost, memory cost, and threads (parallelism) provided as parameters to Argon2.
 // This structure contains no dynamic allocations and can safely be freed by the caller.
 typedef struct {
+	argon2_type mode;
 	uint32_t t_cost; // Time cost
 	uint32_t m_cost; // Memory cost
 	uint32_t parallelism; // Threads
@@ -17,6 +18,7 @@ typedef struct {
 } Argon2_MariaDB_Params;
 
 static const Argon2_MariaDB_Params ARGON2_MARIADB_DEFAULT_PARAMS = {
+	.mode = Argon2_id,
 	.t_cost = 3, // 3 iterations
 	.m_cost = 1 << 16, // 64MiB
 #ifdef ARGON2_NO_THREADS
@@ -24,6 +26,18 @@ static const Argon2_MariaDB_Params ARGON2_MARIADB_DEFAULT_PARAMS = {
 #else
 	.parallelism = 4 // 4 threads
 #endif
+};
+
+static const Argon2_MariaDB_Params ARGON2_MARIADB_MIN_PARAMS = {
+	.t_cost = 3,
+	.m_cost = 1 << 12, // 4MiB
+	.parallelism = 1
+};
+
+static const Argon2_MariaDB_Params ARGON2_MARIADB_MAX_PARAMS = {
+	.t_cost = 10,
+	.m_cost = -1u,
+	.parallelism = 4
 };
 
 // Set default params from ARGON2_MARIADB_DEFAULT_PARAMS
