@@ -5,6 +5,7 @@
 #include <base64.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 void Argon2_MariaDB_Params_default(Argon2_MariaDB_Params *params) {
 	params->mode = ARGON2_MARIADB_DEFAULT_PARAMS.mode;
@@ -142,16 +143,39 @@ int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *enco
 
 int Argon2_MariaDB_Params_validate(const Argon2_MariaDB_Params *params) {
 #define OK(f) (params->f >= ARGON2_MARIADB_MIN_PARAMS.f && params->f <= ARGON2_MARIADB_MAX_PARAMS.f)
-	return OK(mode) && OK(t_cost) && OK(m_cost) && OK(parallelism);
+	return !(OK(mode) && OK(t_cost) && OK(m_cost) && OK(parallelism)); // Returns 0 for success
 #undef OK
 }
 
 int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
-		argon2_type mode, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism) {
-	params->mode = mode;
+		const char *mode, const size_t mode_len, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism) {
+	// Normalize mode to have 'argon' prefix (mode has the form [argon]2{i,d,id})
+	const int mode_prefix_len = sizeof("argon") - 1;
+	const bool add_mode_prefix = mode_len <= mode_prefix_len;
+	const size_t full_mode_len = add_mode_prefix ? mode_len : mode_prefix_len + mode_len;
+	char full_mode[full_mode_len];
+	if (add_mode_prefix) {
+		strcpy(full_mode, "argon");
+		strncpy(full_mode + mode_prefix_len, mode, mode_len);
+	} else {
+		strncpy(full_mode, mode, mode_len);
+	}
+
+	// Set and validate mode
+	params->mode = -1;
+	for (argon2_type t = ARGON2_MARIADB_MIN_PARAMS.mode; t <= ARGON2_MARIADB_MAX_PARAMS.mode; t++) {
+		if (strncmp(full_mode, argon2_type2string(t, 0), full_mode_len) == 0) {
+			params->mode = t;
+			break;
+		}
+	}
+	if (params->mode == -1) {
+		return 1;
+	}
+
+	// Set and Validate numerical params
 	params->t_cost = t_cost;
 	params->m_cost = m_cost;
 	params->parallelism = parallelism;
-
 	return Argon2_MariaDB_Params_validate(params);
 }
