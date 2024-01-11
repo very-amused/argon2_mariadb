@@ -1,5 +1,4 @@
 #include "argon2_mariadb.h"
-#include "mariadb_com.h"
 #include "params.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -52,15 +51,19 @@ int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 char *ARGON2_PARAMS(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error) {
-	Argon2_MariaDB_Params params;
+	Argon2_MariaDB_Params *params = (Argon2_MariaDB_Params *)initid->ptr;
 	// Generate a random salt
-	Argon2_MariaDB_Params_gensalt(&params);
+	Argon2_MariaDB_Params_gensalt(params);
 
 	// Encode params
-	*result_len = Argon2_MariaDB_Params_encoded_len(&params);
-	if (Argon2_MariaDB_Params_encode(&params, result, *result_len) != 0) {
+	*result_len = Argon2_MariaDB_Params_encoded_len(params);
+	if (Argon2_MariaDB_Params_encode(params, result, *result_len) != 0) {
 		*error = 1;
 		return NULL;
 	}
 	return result;
+}
+
+void ARGON2_PARAMS_deinit(UDF_INIT *initid) {
+	free(initid->ptr);
 }
