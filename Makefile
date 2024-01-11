@@ -50,6 +50,8 @@ slib-argon2-target=$(slib-argon2-simd-pthread)
 endif
 endif
 
+MARIADB_PLUGIN_DIR=$(shell mariadb -s -N -e 'SHOW VARIABLES LIKE "plugin_dir"' | awk '{print $$2}')
+
 # Output targets
 lib=$(outdir)/argon2_mariadb.so
 
@@ -60,10 +62,10 @@ test: $(objects) $(objects-test) $(slib-argon2-target) $(slib-b64)
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 install: $(lib)
-	install -m644 $(outdir)/argon2_mariadb.so /usr/lib/mysql/plugin/argon2_mariadb.so
+	install -m644 $(outdir)/argon2_mariadb.so $(MARIADB_PLUGIN_DIR)/argon2_mariadb.so
 
 uninstall:
-	rm -f /usr/lib/mysql/plugin/argon2_mariadb.so
+	rm -f $(MARIADB_PLUGIN_DIR)/argon2_mariadb.so
 
 # Static lib targets
 $(slib-argon2): $(objects-argon2) $(objects-argon2-ref)
