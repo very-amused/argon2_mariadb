@@ -13,18 +13,18 @@
 
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
-	initid->max_length = Argon2_MariaDB_Params_encoded_len(&ARGON2_MARIADB_MAX_PARAMS);
+	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS);
 
-	Argon2_MariaDB_Params *params;
+	Argon2MariaDBParams *params;
 
 	// Validate arg count and types
 	switch (args->arg_count) {
 	// Default params
 	case 0:
 		// Use default params
-		params = malloc(sizeof(Argon2_MariaDB_Params));
+		params = malloc(sizeof(Argon2MariaDBParams));
 		initid->ptr = (char *)params;
-		Argon2_MariaDB_Params_default(params);
+		Argon2MariaDBParams_default(params);
 		break;
 	// Custom params
 	case 4:
@@ -35,7 +35,7 @@ int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 			strcpy(message, "ARGON2_PARAMS(mode, t_cost, m_cost, parallelism) requires a string and 3 ints");
 			return 1;
 		}
-		params = malloc(sizeof(Argon2_MariaDB_Params));
+		params = malloc(sizeof(Argon2MariaDBParams));
 		initid->ptr = (char *)params;
 		// Set and validate params from args
 		const char *mode = args->args[0];
@@ -43,7 +43,7 @@ int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 		const uint32_t t_cost = *((long long *)args->args[1]);
 		const uint32_t m_cost = *((long long *)args->args[2]);
 		const uint32_t parallelism = *((long long *)args->args[3]);
-		if (Argon2_MariaDB_Params_set(params, mode, mode_len, t_cost, m_cost, parallelism) != 0) {
+		if (Argon2MariaDBParams_set(params, mode, mode_len, t_cost, m_cost, parallelism) != 0) {
 			strcpy(message, "One or more invalid arguments to ARGON2_PARAMS()");
 			free(params);
 			return 1;
@@ -60,13 +60,13 @@ int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 char *ARGON2_PARAMS(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error) {
-	Argon2_MariaDB_Params *params = (Argon2_MariaDB_Params *)initid->ptr;
+	Argon2MariaDBParams *params = (Argon2MariaDBParams *)initid->ptr;
 	// Generate a random salt
-	Argon2_MariaDB_Params_gensalt(params);
+	Argon2MariaDBParams_gensalt(params);
 
 	// Encode params
-	*result_len = Argon2_MariaDB_Params_encoded_len(params);
-	if (Argon2_MariaDB_Params_encode(params, result, *result_len) != 0) {
+	*result_len = Argon2MariaDBParams_encoded_len(params);
+	if (Argon2MariaDBParams_encode(params, result, *result_len) != 0) {
 		*error = 1;
 		return NULL;
 	}
@@ -79,10 +79,10 @@ void ARGON2_PARAMS_deinit(UDF_INIT *initid) {
 
 int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
-	initid->max_length = Argon2_MariaDB_Params_encoded_len(&ARGON2_MARIADB_MAX_PARAMS)
+	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS)
 		+ (sizeof("$") - 1) + b64_nopadding_encoded_len(ARGON2_MARIADB_HASH_LEN);
 	// Prepare for param allocation
-	Argon2_MariaDB_Params *params;
+	Argon2MariaDBParams *params;
 
 	// Validate args
 	if (args->arg_count != 2) {
@@ -96,9 +96,9 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	}
 
 	// Allocate and decode params
-	params = malloc(sizeof(Argon2_MariaDB_Params));
+	params = malloc(sizeof(Argon2MariaDBParams));
 	initid->ptr = (char *)params;
-	if (Argon2_MariaDB_Params_decode(params, args->args[0], args->lengths[0]) != 0) {
+	if (Argon2MariaDBParams_decode(params, args->args[0], args->lengths[0]) != 0) {
 		strcpy(message, "ARGON2() failed to decode params");
 		free(params);
 		return 1;
@@ -110,7 +110,7 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error) {
-	Argon2_MariaDB_Params *params = (Argon2_MariaDB_Params *)initid->ptr;
+	Argon2MariaDBParams *params = (Argon2MariaDBParams *)initid->ptr;
 	// Set encoded hash length
 	*result_len = argon2_encodedlen(params->t_cost, params->m_cost, params->parallelism,
 			ARGON2_MARIADB_SALT_LEN, ARGON2_MARIADB_HASH_LEN,
@@ -155,7 +155,7 @@ void ARGON2_deinit(UDF_INIT *initid) {
 
 ARGON2_VERIFY_state *ARGON2_VERIFY_state_malloc() {
 	ARGON2_VERIFY_state *state = malloc(sizeof(ARGON2_VERIFY_state));
-	state->params = malloc(sizeof(Argon2_MariaDB_Params));
+	state->params = malloc(sizeof(Argon2MariaDBParams));
 
 	return state;
 }
@@ -183,7 +183,7 @@ int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	state = ARGON2_VERIFY_state_malloc();
 	initid->ptr = (char *)state;
 	// Decode params
-	if (Argon2_MariaDB_Params_decode(state->params, args->args[0], args->lengths[0]) != 0) {
+	if (Argon2MariaDBParams_decode(state->params, args->args[0], args->lengths[0]) != 0) {
 		strcpy(message, "ARGON2_VERIFY() failed to decode params");
 		ARGON2_VERIFY_state_free(state);
 		return 1;
@@ -202,7 +202,7 @@ int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 		char *is_null, char *error) {
 	ARGON2_VERIFY_state *state = (ARGON2_VERIFY_state *)initid->ptr;
-	Argon2_MariaDB_Params *params = state->params;
+	Argon2MariaDBParams *params = state->params;
 
 	// Select hash function
 	int (*hash_raw)(const uint32_t t_cost, const uint32_t m_cost, const uint32_t parallelism,

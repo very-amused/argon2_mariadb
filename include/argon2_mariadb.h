@@ -20,7 +20,7 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 void ARGON2_VERIFY_deinit(UDF_INIT *initid);
 
 typedef struct {
-	Argon2_MariaDB_Params *params;
+	Argon2MariaDBParams *params;
 	unsigned char hash[ARGON2_MARIADB_HASH_LEN]; // Decoded hash
 } ARGON2_VERIFY_state;
 
