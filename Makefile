@@ -1,4 +1,4 @@
-CFLAGS=-O2 -Wall -I argon2/include -I b64/include -fPIC
+CFLAGS=-O2 -Wall -Iinclude -Isrc -Iargon2/include -Ib64/include -I/usr/include/mysql -fPIC
 
 # Source files
 src=src/params.c src/argon2_mariadb.c
