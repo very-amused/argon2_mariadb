@@ -1,7 +1,9 @@
 #include "argon2_mariadb.h"
 #include "argon2.h"
 #include "params.h"
-#include "base64.h"
+#include "decode.h"
+#include <base64.h>
+#include <sodium/utils.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -135,7 +137,7 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 
 	int argon2_code = hash_encoded(params->t_cost, params->m_cost, params->parallelism,
 			args->args[1], args->lengths[1],
-			params->salt, ARGON2_MARIADB_SALT_LEN,
+			params->salt, sizeof(params->salt),
 			ARGON2_MARIADB_HASH_LEN,
 			result, *result_len);
 	if (argon2_code != ARGON2_OK) {
@@ -148,4 +150,96 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 
 void ARGON2_deinit(UDF_INIT *initid) {
 	free(initid->ptr);
+}
+
+ARGON2_VERIFY_state *ARGON2_VERIFY_state_malloc() {
+	ARGON2_VERIFY_state *state = malloc(sizeof(ARGON2_VERIFY_state));
+	state->params = malloc(sizeof(Argon2_MariaDB_Params));
+
+	return state;
+}
+
+void ARGON2_VERIFY_state_free(ARGON2_VERIFY_state *state) {
+	free(state->params);
+	free(state);
+}
+
+int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
+	ARGON2_VERIFY_state *state;
+
+	// Validate args
+	if (args->arg_count != 2) {
+		strcpy(message, "ARGON2_VERIFY() requires 2 arguments");
+		return 1;
+	}
+	if (args->arg_type[0] != STRING_RESULT ||
+			args->arg_type[1] != STRING_RESULT) {
+		strcpy(message, "ARGON2_VERIFY(hash, passwd) requires 2 strings");
+		return 1;
+	}
+
+	// Allocate state
+	state = ARGON2_VERIFY_state_malloc();
+	initid->ptr = (char *)state;
+	// Decode params
+	if (Argon2_MariaDB_Params_decode(state->params, args->args[0], args->lengths[0]) != 0) {
+		strcpy(message, "ARGON2_VERIFY() failed to decode params");
+		ARGON2_VERIFY_state_free(state);
+		return 1;
+	}
+
+	// Decode hash
+	if (argon2_mariadb_decode_hash(args->args[0], args->lengths[0], state->hash, sizeof(state->hash)) != 0) {
+		strcpy(message, "ARGON2_VERIFY() failed to decode hash");
+		ARGON2_VERIFY_state_free(state);
+		return 1;
+	}
+
+	return 0;
+}
+
+long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
+		char *is_null, char *error) {
+	ARGON2_VERIFY_state *state = (ARGON2_VERIFY_state *)initid->ptr;
+	Argon2_MariaDB_Params *params = state->params;
+
+	// Select hash function
+	int (*hash_raw)(const uint32_t t_cost, const uint32_t m_cost, const uint32_t parallelism,
+			const void *pwd, const size_t pwdlen,
+			const void *salt, const size_t saltlen,
+			void *hash, const size_t hashlen);
+	switch (params->mode) {
+	case Argon2_d:
+		hash_raw = &argon2d_hash_raw;
+		;;
+		break;
+	case Argon2_i:
+		hash_raw = &argon2i_hash_raw;
+		;;
+		break;
+	case Argon2_id:
+		hash_raw = &argon2id_hash_raw;
+		;;
+	}
+
+	// Hash provided password using params
+	unsigned char input_hash[ARGON2_MARIADB_HASH_LEN];
+	int code = hash_raw(params->t_cost, params->m_cost, params->parallelism,
+			args->args[1], args->lengths[1],
+			params->salt, sizeof(params->salt),
+			input_hash, sizeof(input_hash));
+	if (code != ARGON2_OK) {
+		*error = 1;
+		return NULL;
+	}
+	// Compare hash result with correct hash
+	if (sodium_memcmp(input_hash, state->hash, sizeof(state->hash)) != 0) {
+		return 0; // hashes are not equal -> return false
+	}
+	return 1; // hashes are equal -> return true
+}
+
+void ARGON2_VERIFY_deinit(UDF_INIT *initid) {
+	ARGON2_VERIFY_state *state = (ARGON2_VERIFY_state *)initid->ptr;
+	ARGON2_VERIFY_state_free(state);
 }
