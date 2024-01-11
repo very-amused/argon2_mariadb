@@ -1,5 +1,5 @@
 CFLAGS=-O2 -Wall -Iinclude -Isrc -Iargon2/include -Ib64/include -I/usr/include/mysql -fPIC
-LDFLAGS=-lsodium -lm
+LDFLAGS=-lssl -lcrypto -lm
 
 # Source files
 src=src/params.c src/decode.c src/argon2_mariadb.c

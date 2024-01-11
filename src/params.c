@@ -1,6 +1,6 @@
 #include "params.h"
 #include <math.h>
-#include <sodium/randombytes.h>
+#include <openssl/rand.h>
 #include <argon2.h>
 #include <base64.h>
 #include <string.h>
@@ -14,8 +14,10 @@ void Argon2MariaDBParams_default(Argon2MariaDBParams *params) {
 	params->parallelism = ARGON2_MARIADB_DEFAULT_PARAMS.parallelism;
 }
 
-void Argon2MariaDBParams_gensalt(Argon2MariaDBParams *params) {
-	return randombytes_buf(params->salt, ARGON2_MARIADB_SALT_LEN);
+int Argon2MariaDBParams_gensalt(Argon2MariaDBParams *params) {
+	// RAND_bytes() returns 1 on success, -1 if not supported, or 0 on other failure.
+	// We use != 1 to coerce this return to a return of 0 on success and nonzero on failure
+	return RAND_bytes(params->salt, sizeof(params->salt)) != 1;
 }
 
 #define STRLEN(s) (sizeof(s) - 1) // Remove null byte

@@ -3,7 +3,7 @@
 #include "params.h"
 #include "decode.h"
 #include <base64.h>
-#include <sodium/utils.h>
+#include <openssl/crypto.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -62,7 +62,10 @@ char *ARGON2_PARAMS(UDF_INIT *initid, UDF_ARGS *args,
 		char *is_null, char *error) {
 	Argon2MariaDBParams *params = (Argon2MariaDBParams *)initid->ptr;
 	// Generate a random salt
-	Argon2MariaDBParams_gensalt(params);
+	if (Argon2MariaDBParams_gensalt(params) != 0) {
+		*error = 1;
+		return NULL;
+	}
 
 	// Encode params
 	*result_len = Argon2MariaDBParams_encoded_len(params);
@@ -291,7 +294,7 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 		return 0;
 	}
 	// Compare hash result with correct hash
-	if (sodium_memcmp(input_hash, state->hash, sizeof(state->hash)) != 0) {
+	if (CRYPTO_memcmp(input_hash, state->hash, sizeof(state->hash)) != 0) {
 		return 0; // hashes are not equal -> return false
 	}
 	return 1; // hashes are equal -> return true
