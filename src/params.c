@@ -7,53 +7,53 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-void Argon2_MariaDB_Params_default(Argon2_MariaDB_Params *params) {
+void Argon2MariaDBParams_default(Argon2MariaDBParams *params) {
 	params->mode = ARGON2_MARIADB_DEFAULT_PARAMS.mode;
 	params->t_cost = ARGON2_MARIADB_DEFAULT_PARAMS.t_cost;
 	params->m_cost = ARGON2_MARIADB_DEFAULT_PARAMS.m_cost;
 	params->parallelism = ARGON2_MARIADB_DEFAULT_PARAMS.parallelism;
 }
 
-void Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params) {
+void Argon2MariaDBParams_gensalt(Argon2MariaDBParams *params) {
 	return randombytes_buf(params->salt, ARGON2_MARIADB_SALT_LEN);
 }
 
 #define STRLEN(s) (sizeof(s) - 1) // Remove null byte
 #define UINT_STRLEN(v) (v == 0 ? 1 : (size_t)(log10(v)+1))
 
-static const size_t Argon2_MariaDB_Params_encoded_prefix_len(const Argon2_MariaDB_Params *params) {
+static const size_t Argon2MariaDBParams_encoded_prefix_len(const Argon2MariaDBParams *params) {
 	return STRLEN("$") + strlen(argon2_type2string(params->mode, 0))
 		+ STRLEN("$v=") + UINT_STRLEN(ARGON2_VERSION_NUMBER);
 }
-static const size_t Argon2_MariaDB_Params_encoded_params_len(const Argon2_MariaDB_Params *params) {
+static const size_t Argon2MariaDBParams_encoded_params_len(const Argon2MariaDBParams *params) {
 	return STRLEN("$m=") + UINT_STRLEN(params->m_cost)
 		+ STRLEN(",t=") + UINT_STRLEN(params->t_cost)
 		+ STRLEN(",p=") + UINT_STRLEN(params->parallelism);
 }
-static const size_t Argon2_MariaDB_Params_encoded_salt_len(const Argon2_MariaDB_Params *params) {
+static const size_t Argon2MariaDBParams_encoded_salt_len(const Argon2MariaDBParams *params) {
 	return STRLEN("$") + b64_nopadding_encoded_len(sizeof(params->salt));
 }
 
 #undef UINT_STRLEN
 #undef STRLEN
 
-const size_t Argon2_MariaDB_Params_encoded_len(const Argon2_MariaDB_Params *params) {
-	const size_t prefix_len = Argon2_MariaDB_Params_encoded_prefix_len(params);
-	const size_t params_len = Argon2_MariaDB_Params_encoded_params_len(params);
-	const size_t salt_len = Argon2_MariaDB_Params_encoded_salt_len(params);
+const size_t Argon2MariaDBParams_encoded_len(const Argon2MariaDBParams *params) {
+	const size_t prefix_len = Argon2MariaDBParams_encoded_prefix_len(params);
+	const size_t params_len = Argon2MariaDBParams_encoded_params_len(params);
+	const size_t salt_len = Argon2MariaDBParams_encoded_salt_len(params);
 	return prefix_len + params_len + salt_len;
 }
 
 
-int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *result, const size_t result_len) {
+int Argon2MariaDBParams_encode(const Argon2MariaDBParams *params, char *result, const size_t result_len) {
 	// Enforce proper size of result allocation
-	if (result_len != Argon2_MariaDB_Params_encoded_len(params)) {
+	if (result_len != Argon2MariaDBParams_encoded_len(params)) {
 		return 1;
 	}
 
-	const size_t prefix_len = Argon2_MariaDB_Params_encoded_prefix_len(params);
-	const size_t params_len = Argon2_MariaDB_Params_encoded_params_len(params);
-	const size_t salt_len = Argon2_MariaDB_Params_encoded_salt_len(params);
+	const size_t prefix_len = Argon2MariaDBParams_encoded_prefix_len(params);
+	const size_t params_len = Argon2MariaDBParams_encoded_params_len(params);
+	const size_t salt_len = Argon2MariaDBParams_encoded_salt_len(params);
 	
 	// Encode prefix
 	size_t offset = 0;
@@ -91,7 +91,7 @@ static void _strtokn(const char *s, const size_t s_len, const char delim,
 	}
 }
 
-int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *encoded, const size_t encoded_len) {
+int Argon2MariaDBParams_decode(Argon2MariaDBParams *params, const char *encoded, const size_t encoded_len) {
 	// Split tokens using the $ char
 	size_t offset = 0, token_len = 0;
 #define NEXT() _strtokn(encoded, encoded_len, '$', &offset, &token_len)
@@ -141,13 +141,13 @@ int Argon2_MariaDB_Params_decode(Argon2_MariaDB_Params *params, const char *enco
 	return 0;
 }
 
-int Argon2_MariaDB_Params_validate(const Argon2_MariaDB_Params *params) {
+int Argon2MariaDBParams_validate(const Argon2MariaDBParams *params) {
 #define OK(f) (params->f >= ARGON2_MARIADB_MIN_PARAMS.f && params->f <= ARGON2_MARIADB_MAX_PARAMS.f)
 	return !(OK(mode) && OK(t_cost) && OK(m_cost) && OK(parallelism)); // Returns 0 for success
 #undef OK
 }
 
-int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
+int Argon2MariaDBParams_set(Argon2MariaDBParams *params,
 		const char *mode, const size_t mode_len, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism) {
 	// Normalize mode to have 'argon' prefix (mode has the form [argon]2{i,d,id})
 	const int mode_prefix_len = sizeof("argon") - 1;
@@ -177,5 +177,5 @@ int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
 	params->t_cost = t_cost;
 	params->m_cost = m_cost;
 	params->parallelism = parallelism;
-	return Argon2_MariaDB_Params_validate(params);
+	return Argon2MariaDBParams_validate(params);
 }

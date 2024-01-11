@@ -60,3 +60,40 @@ int Argon2MariaDBParams_decode(Argon2MariaDBParams *params, const char *result, 
 
 // Validate params.
 int Argon2MariaDBParams_validate(const Argon2MariaDBParams *params);
+
+// argon2[i|d|id]_hash_encoded
+typedef int (*Argon2MariaDBParams_encoded_hash_fn)(const uint32_t t_cost, const uint32_t m_cost, const uint32_t parallelism,
+		const void *pwd, const size_t pwdlen,
+		const void *salt, const size_t saltlen,
+		const size_t hashlen,
+		char *encoded, const size_t encodedlen);
+// Get the appropriate argon2 encoded hash function from params->mode
+#define ARGON2_MARIADB_ENCODED_HASHFN(mode, fn) \
+	switch (mode) { \
+	case Argon2_d: \
+		fn = &argon2d_hash_encoded; \
+		break; \
+	case Argon2_i: \
+		fn = &argon2i_hash_encoded; \
+		break; \
+	case Argon2_id: \
+		fn = &argon2id_hash_encoded; \
+	}
+		
+// argon2[i|d|id]_hash_raw
+typedef int (*Argon2MariaDBParams_raw_hash_fn)(const uint32_t t_cost, const uint32_t m_cost, const uint32_t parallelism,
+			const void *pwd, const size_t pwdlen,
+			const void *salt, const size_t saltlen,
+			void *hash, const size_t hashlen);
+// Get the appropriate argon2 raw hash function from params->mode
+#define ARGON2_MARIADB_RAW_HASHFN(mode, fn) \
+	switch (mode) { \
+	case Argon2_d: \
+		fn = &argon2d_hash_raw; \
+		break; \
+	case Argon2_i: \
+		fn = &argon2i_hash_raw; \
+		break; \
+	case Argon2_id: \
+		fn = &argon2id_hash_raw; \
+	}

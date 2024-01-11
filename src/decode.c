@@ -14,6 +14,15 @@ static void _strlasttokn(const char *s, const size_t s_len, const char delim,
 	}
 }
 
+void argon2_mariadb_extract_hash(const char *encoded, size_t encoded_len, char **hash, size_t *hash_len) {
+	if (encoded[encoded_len-1] == '\0') {
+		encoded_len--;
+	}
+	_strlasttokn(encoded, encoded_len, '$', hash_len);
+	*hash = ((char *)encoded + encoded_len - *hash_len);
+
+}
+
 int argon2_mariadb_decode_hash(const char *encoded, size_t encoded_len, unsigned char *hash, const size_t hash_len) {
 	if (hash_len != ARGON2_MARIADB_HASH_LEN) {
 		return 1;

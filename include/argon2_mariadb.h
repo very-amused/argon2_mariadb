@@ -14,6 +14,14 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 		char *is_null, char *error);
 void ARGON2_deinit(UDF_INIT *initid);
 
+// An encoding option for hash output which can be supplied as an optional
+// third parameter to ARGON2()
+typedef enum {
+	ARGON2_encoding_std = 0,
+	ARGON2_encoding_raw = 1,
+	ARGON2_encoding_hashonly = 2
+} ARGON2_encoding;
+
 int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
 long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 		char *is_null, char *error);

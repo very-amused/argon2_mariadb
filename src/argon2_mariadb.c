@@ -85,14 +85,39 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	Argon2MariaDBParams *params;
 
 	// Validate args
-	if (args->arg_count != 2) {
-		strcpy(message, "ARGON2() requires 2 arguments");
+	ARGON2_encoding encoding = ARGON2_encoding_std;
+	if (args->arg_count < 2 || args->arg_count > 3) {
+		strcpy(message, "ARGON2() requires 2 or 3 arguments");
 		return 1;
 	}
-	if (args->arg_type[0] != STRING_RESULT ||
-			args->arg_type[1] != STRING_RESULT) {
-		strcpy(message, "ARGON2(params, passwd) requires 2 strings");
-		return 1;
+	switch (args->arg_count) {
+	case 2:
+		if (args->arg_type[0] != STRING_RESULT ||
+				args->arg_type[1] != STRING_RESULT) {
+			strcpy(message, "ARGON2(params, passwd) requires 2 strings");
+			return 1;
+		}
+		break;
+	
+	case 3:
+		if (args->arg_type[0] != STRING_RESULT ||
+				args->arg_type[1] != STRING_RESULT ||
+				args->arg_type[2] != INT_RESULT) {
+			strcpy(message, "ARGON2(params, passwd, enc) requires 2 strings and an int");
+			return 1;
+		}
+		encoding = *(long long *)args->args[2];
+		bool valid = false;
+		for (int i = ARGON2_encoding_std; i <= ARGON2_encoding_hashonly; i++) {
+			if (encoding == i) {
+				valid = true;
+				break;
+			}
+		}
+		if (!valid) {
+			sprintf(message, "ARGON2() received invalid encoding %d", encoding);
+			return 1;
+		}
 	}
 
 	// Allocate and decode params
@@ -111,36 +136,68 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error) {
 	Argon2MariaDBParams *params = (Argon2MariaDBParams *)initid->ptr;
-	// Set encoded hash length
-	*result_len = argon2_encodedlen(params->t_cost, params->m_cost, params->parallelism,
-			ARGON2_MARIADB_SALT_LEN, ARGON2_MARIADB_HASH_LEN,
-			params->mode);
+	const ARGON2_encoding encoding = args->arg_count > 2 ? *(long long *)args->args[2] : ARGON2_encoding_std;
 
 	// Select argon2 function based on mode
-	int (*hash_encoded)(const uint32_t t_cost, const uint32_t m_cost, const uint32_t parallelism,
-			const void *pwd, const size_t pwdlen,
-			const void *salt, const size_t saltlen,
-			const size_t hashlen,
-			char *encoded, const size_t encodedlen);
-	switch (params->mode) {
-	case Argon2_d:
-		;;
-		hash_encoded = &argon2d_hash_encoded;
+	int argon2_code;
+	switch (encoding) {
+	case ARGON2_encoding_std:
+	{
+		// Set encoded hash length
+		*result_len = argon2_encodedlen(params->t_cost, params->m_cost, params->parallelism,
+				ARGON2_MARIADB_SALT_LEN, ARGON2_MARIADB_HASH_LEN,
+				params->mode);
+		// Select hash fn
+		Argon2MariaDBParams_encoded_hash_fn hash_encoded;
+		ARGON2_MARIADB_ENCODED_HASHFN(params->mode, hash_encoded);
+		// Run hash fn
+		argon2_code = hash_encoded(params->t_cost, params->m_cost, params->parallelism,
+				args->args[1], args->lengths[1],
+				params->salt, sizeof(params->salt),
+				ARGON2_MARIADB_HASH_LEN,
+				result, *result_len);
 		break;
-	case Argon2_i:
-		;;
-		hash_encoded = &argon2i_hash_encoded;
+	}
+	
+	case ARGON2_encoding_raw:
+	{
+		// Set raw hash length
+		*result_len = ARGON2_MARIADB_HASH_LEN;
+		// Select hash fn
+		Argon2MariaDBParams_raw_hash_fn hash_raw;
+		ARGON2_MARIADB_RAW_HASHFN(params->mode, hash_raw);
+		// Run hash fn
+		argon2_code = hash_raw(params->t_cost, params->m_cost, params->parallelism,
+				args->args[1], args->lengths[1],
+				params->salt, sizeof(params->salt),
+				result, *result_len);
 		break;
-	case Argon2_id:
-		;;
-		hash_encoded = &argon2id_hash_encoded;
 	}
 
-	int argon2_code = hash_encoded(params->t_cost, params->m_cost, params->parallelism,
-			args->args[1], args->lengths[1],
-			params->salt, sizeof(params->salt),
-			ARGON2_MARIADB_HASH_LEN,
-			result, *result_len);
+	case ARGON2_encoding_hashonly:
+		// Set encoded hash length
+		*result_len = argon2_encodedlen(params->t_cost, params->m_cost, params->parallelism,
+				ARGON2_MARIADB_SALT_LEN, ARGON2_MARIADB_HASH_LEN,
+				params->mode);
+		// Select hash fn
+		Argon2MariaDBParams_encoded_hash_fn hash_encoded;
+		ARGON2_MARIADB_ENCODED_HASHFN(params->mode, hash_encoded);
+		// Run hash fn
+		argon2_code = hash_encoded(params->t_cost, params->m_cost, params->parallelism,
+				args->args[1], args->lengths[1],
+				params->salt, sizeof(params->salt),
+				ARGON2_MARIADB_HASH_LEN,
+				result, *result_len);
+		if (argon2_code != ARGON2_OK) {
+			break;
+		}
+		// Extract hash from encoded string
+		char *encoded_hash;
+		size_t encoded_hash_len;
+		argon2_mariadb_extract_hash(result, *result_len, &encoded_hash, &encoded_hash_len);
+		*result_len = encoded_hash_len;
+		result = encoded_hash;
+	}
 	if (argon2_code != ARGON2_OK) {
 		*error = 1;
 		return NULL;
