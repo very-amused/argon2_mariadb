@@ -45,7 +45,6 @@ static const Argon2MariaDBParams ARGON2_MARIADB_MAX_PARAMS = {
 void Argon2MariaDBParams_default(Argon2MariaDBParams *params);
 // Set and validate all required numerical params (salt generation is still needed).
 // Returns nonzero if validation fails.
-__attribute__((warn_unused_result))
 int Argon2MariaDBParams_set(Argon2MariaDBParams *params,
 		const char *mode, const size_t mode_len, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism);
 // Generate a cryptographically secure random salt.
