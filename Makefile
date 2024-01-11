@@ -2,7 +2,7 @@ CFLAGS=-O2 -Wall -Iinclude -Isrc -Iargon2/include -Ib64/include -I/usr/include/m
 LDFLAGS=-lsodium -lm
 
 # Source files
-src=src/params.c src/argon2_mariadb.c
+src=src/params.c src/decode.c src/argon2_mariadb.c
 src-argon2=argon2/src/argon2.c argon2/src/core.c argon2/src/encoding.c argon2/src/blake2/blake2b.c
 src-argon2-ref=argon2/src/ref.c
 src-argon2-simd=argon2/src/opt.c

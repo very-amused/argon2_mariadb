@@ -31,7 +31,7 @@ static const size_t Argon2_MariaDB_Params_encoded_params_len(const Argon2_MariaD
 		+ STRLEN(",p=") + UINT_STRLEN(params->parallelism);
 }
 static const size_t Argon2_MariaDB_Params_encoded_salt_len(const Argon2_MariaDB_Params *params) {
-	return STRLEN("$") + b64_encoded_len(sizeof(params->salt));
+	return STRLEN("$") + b64_nopadding_encoded_len(sizeof(params->salt));
 }
 
 #undef UINT_STRLEN
@@ -66,7 +66,7 @@ int Argon2_MariaDB_Params_encode(const Argon2_MariaDB_Params *params, char *resu
 	result[offset] = '$';
 	offset++;
 	const size_t b64_salt_len = salt_len - 1; // Account for $ prefix
-	b64_encode(params->salt, sizeof(params->salt), result + offset, b64_salt_len);
+	b64_nopadding_encode(params->salt, sizeof(params->salt), result + offset, b64_salt_len);
 
 	return 0;
 }

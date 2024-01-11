@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
@@ -79,7 +80,7 @@ void ARGON2_PARAMS_deinit(UDF_INIT *initid) {
 int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
 	initid->max_length = Argon2_MariaDB_Params_encoded_len(&ARGON2_MARIADB_MAX_PARAMS)
-		+ (sizeof("$") - 1) + b64_encoded_len(ARGON2_MARIADB_HASH_LEN);
+		+ (sizeof("$") - 1) + b64_nopadding_encoded_len(ARGON2_MARIADB_HASH_LEN);
 	// Prepare for param allocation
 	Argon2_MariaDB_Params *params;
 
@@ -210,16 +211,16 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 			void *hash, const size_t hashlen);
 	switch (params->mode) {
 	case Argon2_d:
-		hash_raw = &argon2d_hash_raw;
 		;;
+		hash_raw = &argon2d_hash_raw;
 		break;
 	case Argon2_i:
-		hash_raw = &argon2i_hash_raw;
 		;;
+		hash_raw = &argon2i_hash_raw;
 		break;
 	case Argon2_id:
-		hash_raw = &argon2id_hash_raw;
 		;;
+		hash_raw = &argon2id_hash_raw;
 	}
 
 	// Hash provided password using params
@@ -230,7 +231,7 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 			input_hash, sizeof(input_hash));
 	if (code != ARGON2_OK) {
 		*error = 1;
-		return NULL;
+		return 0;
 	}
 	// Compare hash result with correct hash
 	if (sodium_memcmp(input_hash, state->hash, sizeof(state->hash)) != 0) {
