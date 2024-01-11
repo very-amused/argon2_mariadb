@@ -9,9 +9,9 @@ This library has not received large amounts of production testing, but should be
 
 ### Build Flags
 - `NO_SIMD`: disable Argon2 SIMD instructions
-- `NO_PTHREAD`: disable support for multiple threads (***WARNING***: builds without NO_PTHREAD default to a parallelism paramemter of 4. Due to this design, I highly advise <ins>against</ins> building with NO_PTHREAD, but still provide the option.)
+- `NO_PTHREAD`: disable Argon2 support for multiple threads (***WARNING***: standard builds (without NO_PTHREAD) default to a parallelism value of 4. Due to this design, I highly advise <ins>against</ins> building with NO_PTHREAD, but still provide the option.)
 
-i.e `make NO_SIMD=true NO_PTHREAD=true` will build no threading or SIMD support.
+i.e `make NO_SIMD=true NO_PTHREAD=true` will build with no threading or SIMD support.
 
 When changing the value of NO_PTHREAD, a clean build (`make clean && make`) is needed to ensure the change is propagated across all files.
 
