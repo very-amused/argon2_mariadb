@@ -1,6 +1,6 @@
 #include "params.h"
 #include <math.h>
-#include <openssl/rand.h>
+#include <sodium/randombytes.h>
 #include <argon2.h>
 #include <base64.h>
 #include <string.h>
@@ -14,8 +14,8 @@ void Argon2_MariaDB_Params_default(Argon2_MariaDB_Params *params) {
 	params->parallelism = ARGON2_MARIADB_DEFAULT_PARAMS.parallelism;
 }
 
-int Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params) {
-	return RAND_bytes(params->salt, ARGON2_MARIADB_SALT_LEN);
+void Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params) {
+	return randombytes_buf(params->salt, ARGON2_MARIADB_SALT_LEN);
 }
 
 #define STRLEN(s) (sizeof(s) - 1) // Remove null byte

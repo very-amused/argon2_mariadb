@@ -9,7 +9,7 @@
 #define ERR(msg, result, result_len, error) \
 	strcpy(result, msg); \
 	*result_len = sizeof(msg); \
-	*error = 1
+	*error = 0
 
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
@@ -26,7 +26,7 @@ int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 				args->arg_type[1] != INT_RESULT || // t_cost
 				args->arg_type[2] != INT_RESULT || // m_cost
 				args->arg_type[3] != INT_RESULT) { // parallelism
-			strcpy(message, "ARGON2_PARAMS(mode, t_cost, m_cost, parallelism) requires a string and 3 integers");
+			strcpy(message, "ARGON2_PARAMS(mode, t_cost, m_cost, parallelism) requires a string and 3 ints");
 			return 1;
 		}
 		break;
@@ -66,10 +66,7 @@ char *ARGON2_PARAMS(UDF_INIT *initid, UDF_ARGS *args,
 	}
 
 	// Generate a random salt
-	if (Argon2_MariaDB_Params_gensalt(&params) != 0) {
-		ERR("ARGON2_PARAMS() failed to generate salt", result, result_len, error);
-		return result;
-	}
+	Argon2_MariaDB_Params_gensalt(&params);
 
 	// Encode params
 	*result_len = Argon2_MariaDB_Params_encoded_len(&params);

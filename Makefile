@@ -1,4 +1,5 @@
 CFLAGS=-O2 -Wall -Iinclude -Isrc -Iargon2/include -Ib64/include -I/usr/include/mysql -fPIC
+LDFLAGS=-lsodium -lm
 
 # Source files
 src=src/params.c src/argon2_mariadb.c
@@ -52,11 +53,17 @@ endif
 # Output targets
 lib=$(outdir)/argon2_mariadb.so
 
-$(lib): $(objects) $(slib-argon2-target)
-	$(CC) -shared -o $@ $^ $(CFLAGS)
+$(lib): $(objects) $(slib-argon2-target) $(slib-b64)
+	$(CC) -shared -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 test: $(objects) $(objects-test) $(slib-argon2-target) $(slib-b64)
-	$(CC) -o $@ $^ $(CFLAGS) -lssl -lcrypto -lm
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+install: $(lib)
+	install -m644 $(outdir)/argon2_mariadb.so /usr/lib/mysql/plugin/argon2_mariadb.so
+
+uninstall:
+	rm -f /usr/lib/mysql/plugin/argon2_mariadb.so
 
 # Static lib targets
 $(slib-argon2): $(objects-argon2) $(objects-argon2-ref)

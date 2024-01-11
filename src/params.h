@@ -48,8 +48,7 @@ void Argon2_MariaDB_Params_default(Argon2_MariaDB_Params *params);
 int Argon2_MariaDB_Params_set(Argon2_MariaDB_Params *params,
 		const char *mode, const size_t mode_len, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism);
 // Generate a cryptographically secure random salt.
-// Relays return status from the system's SSL library.
-int Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params);
+void Argon2_MariaDB_Params_gensalt(Argon2_MariaDB_Params *params);
 
 // Calculate the exact encoded length of params.
 const size_t Argon2_MariaDB_Params_encoded_len(const Argon2_MariaDB_Params *params);
