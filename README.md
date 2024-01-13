@@ -37,7 +37,7 @@ Select default parameters and generate a cryptographically random salt. See `ARG
 Select and validate custom parameters and generate a cryptographically random salt.
 
 Parameters:
-	- `mode`: `[argon]2{i|d|id}` (string, i.e `argon2d` `2id`)
+	- `mode`: `[argon2]{i|d|id}` (string, i.e `argon2d` `id`)
 	- `t_cost`: Time cost in iterations (integer, min: 3, max: 10, i.e `4`)
 	- `m_cost`: Memory cost in KiB (integer, min: 4096 = 4MiB, i.e `1 << 16` = 64MiB)
 	- `parallelism`: Number of threads to use (integer, min: 1, max: 4, i.e `2`)

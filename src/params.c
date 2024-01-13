@@ -151,13 +151,13 @@ int Argon2MariaDBParams_validate(const Argon2MariaDBParams *params) {
 
 int Argon2MariaDBParams_set(Argon2MariaDBParams *params,
 		const char *mode, const size_t mode_len, uint32_t t_cost, uint32_t m_cost, uint32_t parallelism) {
-	// Normalize mode to have 'argon' prefix (mode has the form [argon]2{i,d,id})
-	const int mode_prefix_len = sizeof("argon") - 1;
+	// Normalize mode to have 'argon2' prefix (mode has the form [argon2]{i|d|id})
+	const int mode_prefix_len = sizeof("argon2") - 1;
 	const bool add_mode_prefix = mode_len <= mode_prefix_len;
 	const size_t full_mode_len = add_mode_prefix ? mode_len : mode_prefix_len + mode_len;
 	char full_mode[full_mode_len];
 	if (add_mode_prefix) {
-		strcpy(full_mode, "argon");
+		strcpy(full_mode, "argon2");
 		strncpy(full_mode + mode_prefix_len, mode, mode_len);
 	} else {
 		strncpy(full_mode, mode, mode_len);
