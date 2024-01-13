@@ -2,6 +2,9 @@
 #include <mysql.h>
 #include "params.h"
 
+// Defined in params.h
+extern const Argon2MariaDBParams ARGON2_MARIADB_DEFAULT_PARAMS;
+
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
 char *ARGON2_PARAMS(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
