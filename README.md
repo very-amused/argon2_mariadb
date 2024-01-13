@@ -20,12 +20,14 @@ When changing the value of NO_PTHREAD, a clean build (`make clean && make`) is n
 
 ## Dependencies
 Runtime dependencies: mariadb or mysql, openssl 3.0+
+
 Build dependencies: Standard GNU toolchain (compatibility with FreeBSD toolchain to be tested)
 
 ## Functions
 
 ### ARGON2_PARAMS() -> string
 Select a new set of Argon2\[i|d|id\] parameters encoded as a string. Params should be stored in a `varchar(255)` column.
+
 Can be called in two forms:
 
 - `ARGON2_PARAMS()`
@@ -33,6 +35,7 @@ Select default parameters and generate a cryptographically random salt. See `ARG
 
 - `ARGON2_PARAMS(mode, t_cost, m_cost, parallelism)`
 Select and validate custom parameters and generate a cryptographically random salt.
+
 Parameters:
 	- `mode`: `[argon]2{i|d|id}` (string, i.e `argon2d` `2id`)
 	- `t_cost`: Time cost in iterations (integer, min: 3, max: 10, i.e `4`)
@@ -41,6 +44,7 @@ Parameters:
 
 ### ARGON2(params, password, \[encoding\]) -> string|bytes
 Get the Argon2 hash of `password` using `params`.
+
 Parameters:
   - `params`: An Argon2 parameter string in the form used by `ARGON2_PARAMS()`
 	- `password`: A password string
@@ -51,6 +55,7 @@ Parameters:
 
 ### ARGON2_VERIFY(hash, password) -> bool
 Verify whether `password` is equal to the password used to create `hash`.
+
 Parameters:
   - `hash`: A full Argon2 encoded hash string, including parameters
 	- `password`: A password string
