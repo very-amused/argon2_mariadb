@@ -42,7 +42,7 @@ Parameters:
 ### ARGON2(params, password, \[encoding\]) -> string|bytes
 Get the Argon2 hash of `password` using `params`.
 Parameters:
-	- `params`: An Argon2 parameter string in the form used by `ARGON2_PARAMS()`
+  - `params`: An Argon2 parameter string in the form used by `ARGON2_PARAMS()`
 	- `password`: A password string
 	- `encoding`: OPTIONAL: An integer describing the desired result encoding
 		- `0`: DEFAULT: A full encoded hash string compatible with other Argon2 libraries, includes parameters.
@@ -52,5 +52,5 @@ Parameters:
 ### ARGON2_VERIFY(hash, password) -> bool
 Verify whether `password` is equal to the password used to create `hash`.
 Parameters:
-	- `hash`: A full Argon2 encoded hash string, including parameters
+  - `hash`: A full Argon2 encoded hash string, including parameters
 	- `password`: A password string
