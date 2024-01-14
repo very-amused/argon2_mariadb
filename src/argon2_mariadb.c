@@ -45,6 +45,13 @@ void ARGON2_VERIFY_state_free(ARGON2_VERIFY_state *state) {
 }
 
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
+	// Ensure there are no NULL values or placeholders provided as arguments
+	for (size_t i = 0; i < args->arg_count; i++) {
+		if (args->args[i] == NULL) {
+			strcpy(message, "only constant arguments are permitted");
+			return 1;
+		}
+	}
 	// Declare max encoded length
 	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS);
 
@@ -117,8 +124,6 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
 	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS)
 		+ (sizeof("$") - 1) + b64_nopadding_encoded_len(ARGON2_MARIADB_HASH_LEN);
-	// Prepare for state allocation
-	ARGON2_state *state;
 
 	// Validate args
 	ARGON2_encoding encoding = ARGON2_encoding_std;
@@ -142,6 +147,10 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 			strcpy(message, "ARGON2(params, passwd, enc) requires 2 strings and an int");
 			return 1;
 		}
+		if (args->args[2] == NULL) {
+			strcpy(message, "encoding must be provided as a constant");
+			return 1;
+		}
 		encoding = *(long long *)args->args[2];
 		bool valid = false;
 		for (int i = ARGON2_encoding_std; i <= ARGON2_encoding_hashonly; i++) {
@@ -157,6 +166,7 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	}
 
 	// Allocate state and decode params
+	ARGON2_state *state;
 	state = ARGON2_state_malloc();
 	state->decoded = false;
 	initid->ptr = (char *)state;
