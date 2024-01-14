@@ -16,6 +16,10 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error);
 void ARGON2_deinit(UDF_INIT *initid);
+// State for ARGON2()
+typedef struct ARGON2_state ARGON2_state;
+ARGON2_state *ARGON2_state_malloc();
+void ARGON2_state_free(ARGON2_state *state);
 
 // An encoding option for hash output which can be supplied as an optional
 // third parameter to ARGON2()
@@ -29,11 +33,7 @@ int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
 long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 		char *is_null, char *error);
 void ARGON2_VERIFY_deinit(UDF_INIT *initid);
-
-typedef struct {
-	Argon2MariaDBParams *params;
-	unsigned char hash[ARGON2_MARIADB_HASH_LEN]; // Decoded hash
-} ARGON2_VERIFY_state;
-
+// State for ARGON2_VERIFY()
+typedef struct ARGON2_VERIFY_state ARGON2_VERIFY_state;
 ARGON2_VERIFY_state *ARGON2_VERIFY_state_malloc();
 void ARGON2_VERIFY_state_free(ARGON2_VERIFY_state *state);

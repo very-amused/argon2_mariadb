@@ -11,6 +11,39 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+struct ARGON2_state {
+	Argon2MariaDBParams *params;
+	// Whether params have been decoded. Sometimes decoding and validation
+	// can't be performed in init, and must be deferred to the main function
+	// (such as when the params argument is a statement placeholder)
+	bool decoded;
+};
+ARGON2_state *ARGON2_state_malloc() {
+	ARGON2_state *state = malloc(sizeof(ARGON2_state));
+	state->params = malloc(sizeof(Argon2MariaDBParams));
+	
+	return state;
+}
+void ARGON2_state_free(ARGON2_state *state) {
+	free(state->params);
+	free(state);
+}
+
+struct ARGON2_VERIFY_state {
+	Argon2MariaDBParams *params;
+	unsigned char hash[ARGON2_MARIADB_HASH_LEN]; // Decoded hash
+};
+ARGON2_VERIFY_state *ARGON2_VERIFY_state_malloc() {
+	ARGON2_VERIFY_state *state = malloc(sizeof(ARGON2_VERIFY_state));
+	state->params = malloc(sizeof(Argon2MariaDBParams));
+
+	return state;
+}
+void ARGON2_VERIFY_state_free(ARGON2_VERIFY_state *state) {
+	free(state->params);
+	free(state);
+}
+
 int ARGON2_PARAMS_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
 	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS);
@@ -84,8 +117,8 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	// Declare max encoded length
 	initid->max_length = Argon2MariaDBParams_encoded_len(&ARGON2_MARIADB_MAX_PARAMS)
 		+ (sizeof("$") - 1) + b64_nopadding_encoded_len(ARGON2_MARIADB_HASH_LEN);
-	// Prepare for param allocation
-	Argon2MariaDBParams *params;
+	// Prepare for state allocation
+	ARGON2_state *state;
 
 	// Validate args
 	ARGON2_encoding encoding = ARGON2_encoding_std;
@@ -123,22 +156,37 @@ int ARGON2_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 		}
 	}
 
-	// Allocate and decode params
-	params = malloc(sizeof(Argon2MariaDBParams));
-	initid->ptr = (char *)params;
-	if (Argon2MariaDBParams_decode(params, args->args[0], args->lengths[0]) != 0) {
+	// Allocate state and decode params
+	state = ARGON2_state_malloc();
+	state->decoded = false;
+	initid->ptr = (char *)state;
+	if (args->args[0] == NULL) {
+		return 0;
+	}
+	if (Argon2MariaDBParams_decode(state->params, args->args[0], args->lengths[0]) != 0) {
 		strcpy(message, "ARGON2() failed to decode params");
-		free(params);
+		ARGON2_state_free(state);
 		return 1;
 	}
 
+	state->decoded = true;
 	return 0;
 }
 
 char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 		char *result, unsigned long *result_len,
 		char *is_null, char *error) {
-	Argon2MariaDBParams *params = (Argon2MariaDBParams *)initid->ptr;
+	ARGON2_state *state = (ARGON2_state *)initid->ptr;
+	// Perform late param decoding if needed
+	if (!state->decoded) {
+		if (args->args[0] == NULL ||
+				Argon2MariaDBParams_decode(state->params, args->args[0], args->lengths[0]) != 0) {
+			*error = 1;
+			return NULL;
+		}
+		state->decoded = true;
+	}
+	Argon2MariaDBParams *params = state->params;
 	const ARGON2_encoding encoding = args->arg_count > 2 ? *(long long *)args->args[2] : ARGON2_encoding_std;
 
 	// Select argon2 function based on mode
@@ -210,20 +258,9 @@ char *ARGON2(UDF_INIT *initid, UDF_ARGS *args,
 }
 
 void ARGON2_deinit(UDF_INIT *initid) {
-	free(initid->ptr);
+	ARGON2_state_free((ARGON2_state *)initid->ptr);
 }
 
-ARGON2_VERIFY_state *ARGON2_VERIFY_state_malloc() {
-	ARGON2_VERIFY_state *state = malloc(sizeof(ARGON2_VERIFY_state));
-	state->params = malloc(sizeof(Argon2MariaDBParams));
-
-	return state;
-}
-
-void ARGON2_VERIFY_state_free(ARGON2_VERIFY_state *state) {
-	free(state->params);
-	free(state);
-}
 
 int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	ARGON2_VERIFY_state *state;
@@ -301,6 +338,5 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 }
 
 void ARGON2_VERIFY_deinit(UDF_INIT *initid) {
-	ARGON2_VERIFY_state *state = (ARGON2_VERIFY_state *)initid->ptr;
-	ARGON2_VERIFY_state_free(state);
+	ARGON2_VERIFY_state_free((ARGON2_VERIFY_state *)initid->ptr);
 }
