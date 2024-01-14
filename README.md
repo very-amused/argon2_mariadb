@@ -2,7 +2,7 @@
 A library providing SQL bindings (supporting MariaDB/MySQL) for [Argon2's reference C implementation](https://github.com/P-H-C/phc-winner-argon2).
 
 ## Project State
-This library has not received large amounts of production testing, but should be considered ready for use in non-critical deployments.
+This project is a couple of bug fixes and some testing away from being ready for use in non-critical deployments.
 
 ## Building
 ```make```
