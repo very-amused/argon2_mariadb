@@ -305,7 +305,7 @@ int ARGON2_VERIFY_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 	}
 
 	// Decode hash
-	if (args->args[1] != NULL) {
+	if (args->args[0] != NULL) {
 		if (argon2_mariadb_decode_hash(args->args[0], args->lengths[0], state->hash, sizeof(state->hash)) != 0) {
 			strcpy(message, "ARGON2_VERIFY() failed to decode hash");
 			ARGON2_VERIFY_state_free(state);
@@ -322,14 +322,16 @@ long long ARGON2_VERIFY(UDF_INIT *initid, UDF_ARGS *args,
 	ARGON2_VERIFY_state *state = (ARGON2_VERIFY_state *)initid->ptr;
 	// Perform late params and/or hash decoding if needed
 	if (!state->params_decoded) {
-		if (Argon2MariaDBParams_decode(state->params, args->args[0], args->lengths[0]) != 0) {
+		if (args->args[0] == NULL ||
+				Argon2MariaDBParams_decode(state->params, args->args[0], args->lengths[0]) != 0) {
 			*error = 1;
 			return 0;
 			state->params_decoded = true;
 		}
 	}
 	if (!state->hash_decoded) {
-		if (argon2_mariadb_decode_hash(args->args[0], args->lengths[0], state->hash, sizeof(state->hash)) != 0) {
+		if (args->args[0] == NULL ||
+				argon2_mariadb_decode_hash(args->args[0], args->lengths[0], state->hash, sizeof(state->hash)) != 0) {
 			*error = 1;
 			return 0;
 		}
